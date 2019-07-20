@@ -4,8 +4,49 @@
 
 ## 用法示例
 
-### 示例 1: 后端用 http status 表示成功与失败
+### 示例 1: 后端返回标准的 Result 结构
 
+如果后端返回的格式如下( response.status 总是返回 200 ) :
+
+```
+interface Result<T = any> {
+  code: number; //200| 201| 400 | 404 | 403
+  data?: T; // {user: [1,2]}
+  errorMsg?: string; // 仅code不为200/201时生效
+}
+```
+
+比如在`nodejs`时这样写:
+
+```
+正常:
+response.send({code: 200, data: {users: [1]}}});
+错误: 用msg表示错误
+response.send({code: 200, msg: '页面不存在'});
+```
+
+那么前端配置非常简单:
+
+```
+// rpc.ts
+import getRequest from 'valor-request';
+export default getRequest({
+  prefix: 'http://localhost:3001/api',
+})
+```
+
+使用时:
+
+```
+import request from './rpc';
+function getUsers() {
+  return request('/users');
+}
+```
+
+### 示例 2: 后端用 http status 表示成功与失败
+
+由于返回格式与`Result`格式不兼容, 需要进行转换(normalize):\
 后端返回:
 
 ```
@@ -39,8 +80,9 @@ function getUsers() {
 }
 ```
 
-### 示例 2: 后端返回的 http status 永远为 200, 用 result.code 表示成功与失败
+### 示例 3: 后端返回的 http status 永远为 200, 用 result.code 表示成功与失败
 
+此种情形与`valor-request`假设一致, 但可能字段名称与`Result`不匹配, 同样需要进行转换(normalize):\
 后端返回:
 
 ```
@@ -65,27 +107,6 @@ export default getRequest({
 })
 ```
 
-### 示例 3: 后端返回标准的 Result 结构
-
-后端返回:
-
-```
-正常:
-response.send({code: 200, data: {users: [1]}}});
-错误: 用msg表示错误
-response.send({code: 200, msg: '页面不存在'});
-```
-
-前端配置:
-
-```
-// rpc.ts
-import getRequest from 'valor-request';
-export default getRequest({
-  prefix: 'http://localhost:3001/api',
-})
-```
-
 ### 示例 4: 添加错误处理与 loading 状态
 
 前端配置:
@@ -99,6 +120,22 @@ export default getRequest({
   onError: (e) => uiStore.addMsg(e.errorMsg),
   beforeRequest: () => uiStore.setLoading(true),
   afterRequest: () => uiStore.setLoading(false)
+})
+```
+
+### 示例 5: 配置写 token 的方法
+
+默认写入`headers: {Authorization: Bearer ${token}}`\
+默认`token`从`localStorage.getItem('token')`读取\
+如果跟实际情况不一致, 请使用如下方式覆盖:
+
+```
+import getRequest from 'valor-request';
+export default getRequest({
+  setToken() {
+    const token = localStorage.getItem('jwttoken');
+    return {token};
+  }
 })
 ```
 

@@ -4,7 +4,6 @@
   "main": "index.js",
   "author": "g770728y",
   "license": "MIT",
-  "private": true,
   "scripts": {
     "build": "tsc",
     "start": "tsc -w",
