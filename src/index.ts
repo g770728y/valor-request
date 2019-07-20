@@ -57,7 +57,8 @@ function getRequest(props: ConfigProps) {
         // 判断返回值是否有异常 (code = 200 || 201 ?)
         if (
           newResult.code !== undefined &&
-          [200, 201].indexOf(newResult.code) < 0
+          newResult.code >= 200 &&
+          newResult.code < 300
         )
           throw { from: 'response', result: newResult };
         return newResult;
