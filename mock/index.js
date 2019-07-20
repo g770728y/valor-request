@@ -10,6 +10,10 @@ app.get('/users', (req, res) => res.send({ code: 200, data: { users: [1] } }));
 app.get('/users_error', (req, res) =>
   res.send({ code: 300, errorMsg: 'error!' })
 );
+// 业务级错误
+app.get('/users_with_biz_error', (req, res) => {
+  res.send({ code: 200, errorCode: 'ProducNotFound', errorMsg: 'error!' });
+});
 
 // 需要前端提供normalize方法
 app.get('/users_not_normalized', (req, res) => {

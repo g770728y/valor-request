@@ -9,9 +9,19 @@
 如果后端返回的格式如下( response.status 总是返回 200 ) :
 
 ```
+// 返回的httpCode===200!
 interface Result<T = any> {
+  // 由于response.httpStatus=200, 这里放实际的httpStatus
   code: number; //200| 201| 400 | 404 | 403
+
+  // 所有有效数据将保存到这里, 比如分页信息应存为: {data: {meta: ..., data:[...]}}
   data?: T; // {user: [1,2]}
+
+  // 不同于code, 这是业务Code, 比如'ProductionNotExists', 然后前端查取 错误描述
+  // 然而: 多数程序直接返回 errorMsg, 所以实际上用不到errorCode
+
+  errorCode?: string;
+
   errorMsg?: string; // 仅code不为200/201时生效
 }
 ```
@@ -22,7 +32,7 @@ interface Result<T = any> {
 正常:
 response.send({code: 200, data: {users: [1]}}});
 错误: 用msg表示错误
-response.send({code: 200, msg: '页面不存在'});
+response.send({code: 404, errorMsg: '页面不存在'});
 ```
 
 那么前端配置非常简单:
