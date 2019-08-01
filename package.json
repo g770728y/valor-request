@@ -1,6 +1,6 @@
 {
   "name": "valor-request",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "homepage": "https://github.com/g770728y/valor-request",
   "main": "./dist/index.js",
   "author": "g770728y",

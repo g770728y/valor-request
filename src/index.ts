@@ -71,8 +71,12 @@ function getRequest(props: ConfigProps) {
   });
 
   // 由于interceptor的限制, 不方便在中间件中修改 response, 只好通过 promise 方式处理
-  return (url: string, options: RequestOptionsInit = {}) => {
+  return (url: string, _options: RequestOptionsInit = {}) => {
     beforeRequest();
+    const options = {
+      ..._options,
+      headers: { ..._options.headers, ...setToken() }
+    };
     return request(url, options)
       .then(result => {
         afterResponse();
