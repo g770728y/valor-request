@@ -79,7 +79,6 @@ function getRequest(props: ConfigProps) {
     };
     return request(url, options)
       .then(result => {
-        afterResponse();
         const newResult = normalize(result) as Result;
         // 可能情况1: 后台返回的状态码均为200, 错误写在result里
         // 判断返回值是否有异常 (code = 200 || 201 ?)
@@ -88,10 +87,23 @@ function getRequest(props: ConfigProps) {
         const bizError = newResult.errorCode || newResult.errorMsg;
         if (httpStatusError || bizError)
           throw { from: 'response', result: newResult };
+        afterResponse();
         return newResult;
       })
       .catch(e => {
         afterResponse();
+        // 可能情况0: 超时错 ( 此时没有response, 往下执行可能出错 )
+        if (
+          e.name === 'RequestError' &&
+          (e.message || '').startsWith('timeout')
+        ) {
+          const errorResult = {
+            code: 502,
+            errorMsg: '网络请求超时, 请稍后重试'
+          };
+          onError(errorResult);
+          throw errorResult;
+        }
 
         // 可能情况1: 2: 后台返回的状态码为200 | 201, 但业务码出错
         if (e.from === 'response') {
