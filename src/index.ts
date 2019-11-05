@@ -23,7 +23,7 @@ interface ConfigProps {
   cache?: { max: number; ttl: number } | false;
 
   // 将用户自己的数据标准化为Result, 从而屏蔽不同服务端的影响
-  normalize?: (result: any) => Result;
+  normalize?: (result: any, status?: number) => Result;
 
   // 请求超时, 默认15秒
   timeout?: number;
@@ -105,6 +105,15 @@ function getRequest(props: ConfigProps) {
           throw errorResult;
         }
 
+        if (e.name === 'TypeError' && e.message === 'Network request failed') {
+          const errorResult = {
+            code: 1000,
+            errorMsg: '断网了, 请检查网络'
+          };
+          onError(errorResult);
+          throw errorResult;
+        }
+
         // 可能情况1: 2: 后台返回的状态码为200 | 201, 但业务码出错
         if (e.from === 'response') {
           const newResult = {
@@ -118,7 +127,9 @@ function getRequest(props: ConfigProps) {
 
         // 可能情况2, 后台返回的状态码不为 2xx
         const normalizedResult =
-          e.from === 'response' ? e.result : (normalize(e.data) as Result);
+          e.from === 'response'
+            ? e.result
+            : (normalize(e.data, e.response.status) as Result);
         const errorResult = {
           ...normalizedResult,
           errorMsg:
