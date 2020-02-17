@@ -1,4 +1,4 @@
-import { extend, RequestOptionsInit } from 'umi-request';
+import { extend, RequestOptionsInit } from "umi-request";
 
 function identity<T>(args: T): T {
   return args;
@@ -7,14 +7,14 @@ function identity<T>(args: T): T {
 function nop(...args: any[]) {}
 
 // 标准返回 ( 假定总是返回response.httpStatus = 200)
-interface Result<T = any> {
+export interface Result<T = any> {
   code: number; // 所以使用code放真实的httpStatus: 200| 201| 400 | 404 | 403
   data?: T; // {user: [1,2]}
   errorCode?: string; // 业务级错误码(如ProductNotExists), 一般只使用errorMsg
   errorMsg?: string; // 仅code不为200/201时生效
 }
 
-interface ConfigProps {
+export interface ConfigProps {
   // 前缀. 比如request('/users'), 而prefix=http://localhost:3000/api
   // 那么真实url为http://localhost:3000/api/users
   prefix?: string;
@@ -47,12 +47,12 @@ interface ConfigProps {
 }
 function getRequest(props: ConfigProps) {
   const {
-    prefix = '/api',
+    prefix = "/api",
     cache = false,
     normalize = identity,
     timeout = 15000,
     setToken = () => {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       return { Authorization: `Bearer ${token}` };
     },
     beforeRequest = nop,
@@ -86,7 +86,7 @@ function getRequest(props: ConfigProps) {
           newResult.code !== undefined && newResult.code - 200 >= 100;
         const bizError = newResult.errorCode || newResult.errorMsg;
         if (httpStatusError || bizError)
-          throw { from: 'response', result: newResult };
+          throw { from: "response", result: newResult };
         afterResponse();
         return newResult;
       })
@@ -94,28 +94,28 @@ function getRequest(props: ConfigProps) {
         afterResponse();
         // 可能情况0: 超时错 ( 此时没有response, 往下执行可能出错 )
         if (
-          e.name === 'RequestError' &&
-          (e.message || '').startsWith('timeout')
+          e.name === "RequestError" &&
+          (e.message || "").startsWith("timeout")
         ) {
           const errorResult = {
             code: 502,
-            errorMsg: '网络请求超时, 请稍后重试'
+            errorMsg: "网络请求超时, 请稍后重试"
           };
           onError(errorResult);
           throw errorResult;
         }
 
-        if (e.name === 'TypeError' && e.message === 'Network request failed') {
+        if (e.name === "TypeError" && e.message === "Network request failed") {
           const errorResult = {
             code: 1000,
-            errorMsg: '断网了, 请检查网络'
+            errorMsg: "断网了, 请检查网络"
           };
           onError(errorResult);
           throw errorResult;
         }
 
         // 可能情况1: 2: 后台返回的状态码为200 | 201, 但业务码出错
-        if (e.from === 'response') {
+        if (e.from === "response") {
           const newResult = {
             ...e.result,
             errorMsg:
@@ -127,7 +127,7 @@ function getRequest(props: ConfigProps) {
 
         // 可能情况2, 后台返回的状态码不为 2xx
         const normalizedResult =
-          e.from === 'response'
+          e.from === "response"
             ? e.result
             : (normalize(e.data, e.response.status) as Result);
         const errorResult = {
