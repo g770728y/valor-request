@@ -59,7 +59,7 @@ function getRequest(props: ConfigProps) {
     afterResponse = nop,
     onError = nop,
     getMsgByHttpStatus = nop,
-    getMsgByBizCode = nop
+    getMsgByBizCode = nop,
   } = props;
   const request = extend({
     prefix,
@@ -67,7 +67,7 @@ function getRequest(props: ConfigProps) {
     timeout,
     headers: setToken(),
     maxCache: cache && cache.max ? cache.max : 0,
-    ttl: cache && cache.ttl ? cache.ttl : 60000
+    ttl: cache && cache.ttl ? cache.ttl : 60000,
   });
 
   // 由于interceptor的限制, 不方便在中间件中修改 response, 只好通过 promise 方式处理
@@ -75,10 +75,10 @@ function getRequest(props: ConfigProps) {
     beforeRequest();
     const options = {
       ..._options,
-      headers: { ..._options.headers, ...setToken() }
+      headers: { ..._options.headers, ...setToken() },
     };
     return request(url, options)
-      .then(result => {
+      .then((result) => {
         const newResult = normalize(result) as Result;
         // 可能情况1: 后台返回的状态码均为200, 错误写在result里
         // 判断返回值是否有异常 (code = 200 || 201 ?)
@@ -90,7 +90,7 @@ function getRequest(props: ConfigProps) {
         afterResponse();
         return newResult;
       })
-      .catch(e => {
+      .catch((e) => {
         afterResponse();
         // 可能情况0: 超时错 ( 此时没有response, 往下执行可能出错 )
         if (
@@ -99,19 +99,28 @@ function getRequest(props: ConfigProps) {
         ) {
           const errorResult = {
             code: 502,
-            errorMsg: "网络请求超时, 请稍后重试"
+            errorMsg: "网络请求超时, 请稍后重试",
           };
           onError(errorResult);
           throw errorResult;
         }
 
-        if (e.name === "TypeError" && e.message === "Network request failed") {
-          const errorResult = {
-            code: 1000,
-            errorMsg: "断网了, 请检查网络"
-          };
-          onError(errorResult);
-          throw errorResult;
+        if (e.name === "TypeError") {
+          if (e.message === "Network request failed") {
+            const errorResult = {
+              code: 1000,
+              errorMsg: "断网了, 请检查网络",
+            };
+            onError(errorResult);
+            throw errorResult;
+          } else {
+            const errorResult = {
+              code: 1000,
+              errorMsg: "网络问题, 可能是跨域引起",
+            };
+            onError(errorResult);
+            throw errorResult;
+          }
         }
 
         // 可能情况1: 2: 后台返回的状态码为200 | 201, 但业务码出错
@@ -119,7 +128,7 @@ function getRequest(props: ConfigProps) {
           const newResult = {
             ...e.result,
             errorMsg:
-              getMsgByBizCode(e.result.errorCode || null) || e.result.errorMsg
+              getMsgByBizCode(e.result.errorCode || null) || e.result.errorMsg,
           };
           onError(newResult);
           throw newResult;
@@ -136,7 +145,7 @@ function getRequest(props: ConfigProps) {
             getMsgByHttpStatus(normalizedResult.code) ||
             getMsgByBizCode(normalizedResult.errorCode || null) ||
             normalizedResult.errorMsg,
-          code: e.response.status
+          code: e.response.status,
         };
         onError(errorResult);
         throw errorResult;
