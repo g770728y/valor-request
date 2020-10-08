@@ -25,6 +25,9 @@ export interface ConfigProps {
   // 将用户自己的数据标准化为Result, 从而屏蔽不同服务端的影响
   normalize?: (result: any, status?: number) => Result;
 
+  // 服务器直接抛出httpCode!=2xx时, 需要专门处理为错误Result对象
+  normalizeHttpError?: (response: Response) => Result;
+
   // 请求超时, 默认15秒
   timeout?: number;
 
@@ -45,11 +48,19 @@ export interface ConfigProps {
   // 但如果你在前端维护了一个错误码映射表, 那么可以通过此方法查取错误信息, 覆盖errorMsg
   getMsgByBizCode?: (errorCode: string | null) => string;
 }
+
+/**
+ * 后期有时间做一个整改:
+ * 目前既考虑了客户端返回200+{code,data,msg}, 也考虑了使用状态码返回
+ * 所以代码零乱, 并且接口也很不好用
+ * 应改用策略模式分开
+ */
 function getRequest(props: ConfigProps) {
   const {
     prefix = "/api",
     cache = false,
     normalize = identity,
+    normalizeHttpError = identity,
     timeout = 15000,
     setToken = () => {
       const token = localStorage.getItem("token");
@@ -79,6 +90,8 @@ function getRequest(props: ConfigProps) {
     };
     return request(url, options)
       .then((result) => {
+        // 1. 只要后台返回200/201, 就走这里 ( 可能返回 {code,errorMsg,data}, 也可能直接返回data, 由normailize自己判断 )
+        //    注意, 如果normalize后的{code: !=2xx}, 则抛出错误
         const newResult = normalize(result) as Result;
         // 可能情况1: 后台返回的状态码均为200, 错误写在result里
         // 判断返回值是否有异常 (code = 200 || 201 ?)
@@ -91,6 +104,9 @@ function getRequest(props: ConfigProps) {
         return newResult;
       })
       .catch((e) => {
+        // 2. 除了200/201, 其余均走这里
+        // 所以需要考虑: 1) 超时/断网/跨域等通常情况 2) 由上面的normalize得到的code!=2xx主动抛出的错(from=response)
+        //             3) 后台直接抛出 httpStatus=400等
         afterResponse();
         // 可能情况0: 超时错 ( 此时没有response, 往下执行可能出错 )
         if (
@@ -123,7 +139,7 @@ function getRequest(props: ConfigProps) {
           }
         }
 
-        // 可能情况1: 2: 后台返回的状态码为200 | 201, 但业务码出错
+        // 可能情况1: 2: 后台返回的状态码为200 | 201, 但业务码出错 ( 由上一步的then 主动抛出 )
         if (e.from === "response") {
           const newResult = {
             ...e.result,
@@ -134,11 +150,9 @@ function getRequest(props: ConfigProps) {
           throw newResult;
         }
 
-        // 可能情况2, 后台返回的状态码不为 2xx
-        const normalizedResult =
-          e.from === "response"
-            ? e.result
-            : (normalize(e.data, e.response.status) as Result);
+        // 可能情况2, 到这一步, 服务端必定有返回数据, 同时 后台返回的状态码不为 2xx
+        // 一般返回 e.message="http error", 但无法确保浏览器一致
+        const normalizedResult = normalizeHttpError(e.response) as Result;
         const errorResult = {
           ...normalizedResult,
           errorMsg:
@@ -150,6 +164,8 @@ function getRequest(props: ConfigProps) {
         onError(errorResult);
         throw errorResult;
       });
+
+    // 注意, 上面的判断只考虑了 断网/跨域/超时, 如果是由别的原因导致服务器根本没有返回, 则上面的"可能情况2"会出错
   };
 }
 
