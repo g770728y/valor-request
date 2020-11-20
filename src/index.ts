@@ -26,7 +26,9 @@ export interface ConfigProps {
   normalize?: (result: any, status?: number) => Result;
 
   // 服务器直接抛出httpCode!=2xx时, 需要专门处理为错误Result对象
-  normalizeHttpError?: (response: Response) => Result;
+  // normalizeHttpError?: (response: Response) => Result;
+  // code: response.code, messageBody: response.body, 可能为string/object/array
+  normalizeHttpError?: (httpCode: number, messageBody: any) => Result;
 
   // 请求超时, 默认15秒
   timeout?: number;
@@ -103,7 +105,7 @@ function getRequest(props: ConfigProps) {
         afterResponse();
         return newResult;
       })
-      .catch((e) => {
+      .catch(async (e) => {
         // 2. 除了200/201, 其余均走这里
         // 所以需要考虑: 1) 超时/断网/跨域等通常情况 2) 由上面的normalize得到的code!=2xx主动抛出的错(from=response)
         //             3) 后台直接抛出 httpStatus=400等
@@ -152,17 +154,25 @@ function getRequest(props: ConfigProps) {
 
         // 可能情况2, 到这一步, 服务端必定有返回数据, 同时 后台返回的状态码不为 2xx
         // 一般返回 e.message="http error", 但无法确保浏览器一致
-        const normalizedResult = normalizeHttpError(e.response) as Result;
-        const errorResult = {
-          ...normalizedResult,
-          errorMsg:
-            getMsgByHttpStatus(normalizedResult.code) ||
-            getMsgByBizCode(normalizedResult.errorCode || null) ||
-            normalizedResult.errorMsg,
-          code: e.response.status,
-        };
-        onError(errorResult);
-        throw errorResult;
+        const httpCode = e.response.status;
+        const httpStatusText = e.response.statusText;
+        const messageBody = await e.response.json();
+        const normalizedResult = normalizeHttpError(
+          httpCode,
+          messageBody
+        ) as Result;
+        // const errorResult = {
+        //   ...normalizedResult,
+        //   errorMsg:
+        //     getMsgByHttpStatus(normalizedResult.code) ||
+        //     getMsgByBizCode(normalizedResult.errorCode || null) ||
+        //     normalizedResult.errorMsg,
+        //   code: e.response.status,
+        // };
+        // onError(errorResult);
+        // throw errorResult;
+        onError(normalizedResult);
+        throw normalizedResult;
       });
 
     // 注意, 上面的判断只考虑了 断网/跨域/超时, 如果是由别的原因导致服务器根本没有返回, 则上面的"可能情况2"会出错

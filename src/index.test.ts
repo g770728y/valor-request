@@ -85,11 +85,10 @@ describe("get Request", () => {
       data: result.xdata,
       errorMsg: result.errorMsg,
     }),
-    normalizeHttpError: (response: any) => {
-      // console.log("response", response);
+    normalizeHttpError: (code: number, messageBody: any) => {
       return {
-        code: response.status,
-        errorMsg: response.statusText,
+        code: code,
+        errorMsg: messageBody,
       };
     },
     onError: (e0) => {
@@ -100,7 +99,11 @@ describe("get Request", () => {
     try {
       await request4("/users_with_status_403");
     } catch (e) {
-      expect(e).toEqual({ code: 403, errorMsg: "Forbidden", data: undefined });
+      expect(e).toEqual({
+        code: 403,
+        errorMsg: { errorMsg: "error!" },
+        data: undefined,
+      });
     }
   });
 
