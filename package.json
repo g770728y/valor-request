@@ -6,7 +6,7 @@
   "author": "g770728y",
   "license": "MIT",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --module esnext",
     "start": "tsc -w",
     "test": "jest --watch"
   },
