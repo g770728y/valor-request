@@ -1,6 +1,6 @@
 {
   "name": "valor-request",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "homepage": "https://github.com/g770728y/valor-request",
   "main": "./dist/index.js",
   "author": "g770728y",
@@ -17,7 +17,7 @@
     "@types/jest": "^24.0.15",
     "jest": "^24.8.0",
     "ts-jest": "^24.0.2",
-    "typescript": "^3.5.3"
+    "typescript": "^4.0.0"
   },
   "files": [
     "dist"
