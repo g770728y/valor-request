@@ -81,6 +81,8 @@ function getRequest(props: ConfigProps) {
     headers: setToken(),
     maxCache: cache && cache.max ? cache.max : 0,
     ttl: cache && cache.ttl ? cache.ttl : 60000,
+    // 无论是否跨域, 始终发送cookie
+    credentials: "include",
   });
 
   // 由于interceptor的限制, 不方便在中间件中修改 response, 只好通过 promise 方式处理
